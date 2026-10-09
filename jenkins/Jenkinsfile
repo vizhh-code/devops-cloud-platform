@@ -36,5 +36,19 @@ pipeline {
                 sh 'docker images devops-cloud-platform'
             }
         }
+        stage('Trivy Security Scan') {
+            steps {
+                sh '''
+                    echo "===== TRIVY VULNERABILITY SCAN ====="
+
+                    GODEBUG=http2client=0 trivy image \
+                        --timeout 30m \
+                        --db-repository ghcr.io/aquasecurity/trivy-db:2 \
+                        --severity HIGH,CRITICAL \
+                        devops-cloud-platform:${BUILD_NUMBER}
+                '''
+            }
+        }
+
     }
 }
