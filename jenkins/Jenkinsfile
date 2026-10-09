@@ -1,0 +1,54 @@
+pipeline {
+    agent any
+
+    stages {
+
+        stage('Code Quality & Test') {
+            steps {
+                sh '''
+                    python3 -m venv .venv
+
+                    .venv/bin/python -m pip install --upgrade pip
+                    .venv/bin/python -m pip install -r app/requirements.txt
+                    .venv/bin/python -m pip install pytest ruff
+
+                    echo "===== CODE QUALITY: RUFF ====="
+                    .venv/bin/ruff check app tests
+
+                    echo "===== UNIT TESTS: PYTEST ====="
+                    .venv/bin/python -m pytest
+                '''
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh '''
+                    docker build \
+                    -f docker/Dockerfile \
+                    -t devops-cloud-platform:${BUILD_NUMBER} .
+                '''
+            }
+        }
+
+        stage('Docker Verify') {
+            steps {
+                sh 'docker images devops-cloud-platform'
+            }
+        }
+        stage('Trivy Security Scan') {
+            steps {
+                sh '''
+                    echo "===== TRIVY VULNERABILITY SCAN ====="
+
+                    GODEBUG=http2client=0 trivy image \
+                        --timeout 30m \
+                        --db-repository ghcr.io/aquasecurity/trivy-db:2 \
+                        --severity HIGH,CRITICAL \
+                        devops-cloud-platform:${BUILD_NUMBER}
+                '''
+            }
+        }
+
+    }
+}
