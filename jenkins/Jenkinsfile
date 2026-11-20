@@ -25,8 +25,8 @@ pipeline {
             steps {
                 sh '''
                     docker build \
-                    -f docker/Dockerfile \
-                    -t devops-cloud-platform:${BUILD_NUMBER} .
+                        -f docker/Dockerfile \
+                        -t devops-cloud-platform:${BUILD_NUMBER} .
                 '''
             }
         }
@@ -36,6 +36,28 @@ pipeline {
                 sh 'docker images devops-cloud-platform'
             }
         }
+
+        stage('Trivy Diagnostics') {
+            steps {
+                sh '''
+                    echo "===== TRIVY LOCATION ====="
+                    command -v trivy || true
+
+                    echo "===== TRIVY VERSION ====="
+                    trivy --version || true
+
+                    echo "===== JENKINS USER ====="
+                    whoami
+
+                    echo "===== HOME DIRECTORY ====="
+                    echo "$HOME"
+
+                    echo "===== TRIVY CACHE ====="
+                    ls -lah "$HOME/.cache/trivy" 2>/dev/null || echo "Trivy cache not found"
+                '''
+            }
+        }
+
         stage('Trivy Security Scan') {
             steps {
                 sh '''
